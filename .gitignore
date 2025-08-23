@@ -177,7 +177,6 @@ dist
 
 # Gatsby files
 .cache/
-public
 
 # Storybook build outputs
 .out
@@ -245,6 +244,5 @@ logs/*
 
 # Test files
 *.pdf
-*.txt
 test_*.py
 debug_*.py
