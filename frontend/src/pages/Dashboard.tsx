@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Upload, FileText, TrendingUp, CheckCircle, Clock, AlertTriangle } from 'lucide-react';
 import FileUpload from '../components/FileUpload';
 import ContractList from '../components/ContractList';
 import { Contract } from '../types/contract';
+import { contractApi } from '../services/api';
 
 interface DashboardProps {
   onUploadSuccess: (contractId: string) => void;
@@ -35,8 +36,7 @@ const Dashboard: React.FC<DashboardProps> = ({
   refreshTrigger
 }) => {
   const [activeTab, setActiveTab] = useState<'upload' | 'contracts'>('upload');
-
-  const stats = [
+  const [stats, setStats] = useState([
     {
       title: 'Total Contracts',
       value: '0',
@@ -65,7 +65,55 @@ const Dashboard: React.FC<DashboardProps> = ({
       color: 'text-purple-600',
       bgColor: 'bg-purple-50'
     }
-  ];
+  ]);
+
+  const loadStatistics = async () => {
+    try {
+      const statistics = await contractApi.getStatistics();
+      setStats([
+        {
+          title: 'Total Contracts',
+          value: statistics.total_contracts.toString(),
+          icon: FileText,
+          color: 'text-blue-600',
+          bgColor: 'bg-blue-50'
+        },
+        {
+          title: 'Processing',
+          value: statistics.processing.toString(),
+          icon: Clock,
+          color: 'text-yellow-600',
+          bgColor: 'bg-yellow-50'
+        },
+        {
+          title: 'Completed',
+          value: statistics.completed.toString(),
+          icon: CheckCircle,
+          color: 'text-green-600',
+          bgColor: 'bg-green-50'
+        },
+        {
+          title: 'Success Rate',
+          value: `${statistics.success_rate}%`,
+          icon: TrendingUp,
+          color: 'text-purple-600',
+          bgColor: 'bg-purple-50'
+        }
+      ]);
+    } catch (error) {
+      console.error('Failed to load statistics:', error);
+    }
+  };
+
+  useEffect(() => {
+    loadStatistics();
+  }, [refreshTrigger]);
+
+  // Refresh statistics every 30 seconds to keep them updated
+  useEffect(() => {
+    const interval = setInterval(loadStatistics, 30000);
+    return () => clearInterval(interval);
+  }, []);
 
   return (
     <div className="space-y-8">

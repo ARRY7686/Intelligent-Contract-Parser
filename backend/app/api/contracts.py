@@ -227,6 +227,75 @@ async def list_contracts(
         raise HTTPException(status_code=500, detail="Error listing contracts")
 
 
+@router.get("/statistics")
+async def get_contract_statistics():
+    """
+    Retrieve contract statistics for dashboard display.
+    
+    This endpoint provides aggregated statistics about contracts in the system,
+    including total counts, processing status breakdowns, and success rates.
+    It's designed for dashboard displays and provides real-time metrics.
+    
+    Statistics Include:
+    - Total Contracts: Count of all contracts in the system
+    - Processing: Count of contracts currently being processed
+    - Completed: Count of successfully processed contracts
+    - Failed: Count of contracts that failed processing
+    - Success Rate: Percentage of completed contracts vs total
+    
+    Use Cases:
+    - Dashboard metrics: Display key statistics to users
+    - System monitoring: Track processing performance
+    - Quality assessment: Monitor success rates
+    - Capacity planning: Understand system usage patterns
+    
+    Response Data:
+    - total_contracts: Total number of contracts in the system
+    - processing: Number of contracts currently processing
+    - completed: Number of successfully completed contracts
+    - failed: Number of failed contracts
+    - success_rate: Percentage success rate (0-100)
+    
+    Error Handling:
+    - Database errors: Returns 500 Internal Server Error
+    - Aggregation errors: Returns 500 Internal Server Error
+    
+    Returns:
+        dict: Contract statistics with counts and percentages
+        
+    Raises:
+        HTTPException: For database errors or aggregation failures
+    """
+    
+    try:
+        collection = get_collection("contracts")
+        
+        # Get total count
+        total_contracts = await collection.count_documents({})
+        
+        # Get counts by status
+        processing = await collection.count_documents({"status": ProcessingStatus.PROCESSING})
+        completed = await collection.count_documents({"status": ProcessingStatus.COMPLETED})
+        failed = await collection.count_documents({"status": ProcessingStatus.FAILED})
+        
+        # Calculate success rate
+        success_rate = 0
+        if total_contracts > 0:
+            success_rate = round((completed / total_contracts) * 100, 1)
+        
+        return {
+            "total_contracts": total_contracts,
+            "processing": processing,
+            "completed": completed,
+            "failed": failed,
+            "success_rate": success_rate
+        }
+    
+    except Exception as e:
+        logger.error(f"Error retrieving contract statistics: {str(e)}")
+        raise HTTPException(status_code=500, detail="Error retrieving contract statistics")
+
+
 @router.get("/{contract_id}/status", response_model=ContractStatus)
 async def get_contract_status(contract_id: str):
     """

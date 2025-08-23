@@ -150,6 +150,27 @@ export const contractApi = {
              const response = await api.delete(`/contracts/delete/${contractId}`);
              return response.data;
            },
+
+  /**
+   * Retrieve contract statistics for dashboard display.
+   * 
+   * This function fetches aggregated statistics about contracts in the system,
+   * including total counts, processing status breakdowns, and success rates.
+   * It's designed for dashboard displays and provides real-time metrics.
+   * 
+   * @returns Promise containing contract statistics with counts and percentages
+   * @throws Error if API call fails
+   */
+  getStatistics: async (): Promise<{
+    total_contracts: number;
+    processing: number;
+    completed: number;
+    failed: number;
+    success_rate: number;
+  }> => {
+    const response = await api.get('/contracts/statistics');
+    return response.data;
+  },
 };
 
 /**
