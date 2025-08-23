@@ -8,6 +8,30 @@ interface ContractDetailProps {
   onBack: () => void;
 }
 
+/**
+ * Contract detail component that displays comprehensive analysis results.
+ * 
+ * This component provides a detailed view of contract analysis results,
+ * including extracted data, confidence scores, and gap analysis. It handles
+ * different processing states and provides interactive features for contract
+ * management.
+ * 
+ * Features:
+ * - Complete contract analysis display
+ * - Confidence score visualization with color coding
+ * - Gap analysis with recommendations
+ * - Contract download functionality
+ * - Contract deletion with confirmation
+ * - Loading and error state management
+ * - Responsive data visualization
+ * 
+ * The component displays structured data extracted from contracts including
+ * party information, financial details, payment terms, SLA information,
+ * and comprehensive gap analysis with actionable recommendations.
+ * 
+ * @param contract - Contract object containing metadata and analysis data
+ * @param onBack - Callback function to navigate back to contract list
+ */
 const ContractDetail: React.FC<ContractDetailProps> = ({ contract, onBack }) => {
   const [contractData, setContractData] = useState<ContractData | null>(null);
   const [loading, setLoading] = useState(false);

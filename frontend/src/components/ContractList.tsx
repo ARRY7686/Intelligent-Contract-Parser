@@ -8,6 +8,27 @@ interface ContractListProps {
   refreshTrigger: number;
 }
 
+/**
+ * Contract list component that displays and manages all uploaded contracts.
+ * 
+ * This component provides a comprehensive interface for viewing, searching,
+ * filtering, and managing contracts with full CRUD operations.
+ * 
+ * Features:
+ * - Paginated contract display with sorting
+ * - Search functionality by filename
+ * - Status filtering (pending, processing, completed, failed)
+ * - Contract download functionality
+ * - Contract deletion with confirmation
+ * - Real-time status updates
+ * - Loading and error state management
+ * 
+ * The component integrates with the contract API service for all operations
+ * and provides a responsive, user-friendly interface for contract management.
+ * 
+ * @param onContractSelect - Callback function triggered when a contract is selected
+ * @param refreshTrigger - Number that triggers contract list refresh when changed
+ */
 const ContractList: React.FC<ContractListProps> = ({ onContractSelect, refreshTrigger }) => {
   const [contracts, setContracts] = useState<Contract[]>([]);
   const [loading, setLoading] = useState(true);

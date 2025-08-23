@@ -6,7 +6,20 @@ import Dashboard from './pages/Dashboard';
 import ContractDetailPage from './pages/ContractDetailPage';
 import { Contract } from './types/contract';
 
-// Component that uses useNavigate hook
+/**
+ * Main application content component that handles routing and state management.
+ * 
+ * This component manages the application's routing logic, contract selection,
+ * and navigation between different views. It uses React Router for navigation
+ * and maintains state for selected contracts and refresh triggers.
+ * 
+ * Features:
+ * - Contract upload success/error handling
+ * - Contract selection and navigation
+ * - Route management for dashboard and contract detail views
+ * - State management for selected contracts
+ * - Refresh trigger for updating contract lists
+ */
 function AppContent() {
   const navigate = useNavigate();
   const [selectedContract, setSelectedContract] = useState<Contract | null>(null);
@@ -67,6 +80,15 @@ function AppContent() {
   );
 }
 
+/**
+ * Root application component that provides routing context.
+ * 
+ * This component wraps the entire application with React Router's BrowserRouter,
+ * enabling client-side routing throughout the application. It serves as the
+ * entry point for the React application.
+ * 
+ * @returns Router-wrapped application with routing capabilities
+ */
 function App() {
   return (
     <Router>

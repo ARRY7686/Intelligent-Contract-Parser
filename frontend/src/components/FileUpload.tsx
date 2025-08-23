@@ -9,6 +9,26 @@ interface FileUploadProps {
   onUploadError: (error: string) => void;
 }
 
+/**
+ * File upload component with drag-and-drop functionality for contract PDFs.
+ * 
+ * This component provides an intuitive interface for uploading contract files
+ * with comprehensive validation, progress tracking, and error handling.
+ * 
+ * Features:
+ * - Drag-and-drop file upload with visual feedback
+ * - File type validation (PDF only)
+ * - File size validation (50MB limit)
+ * - Upload progress indication
+ * - Success and error state management
+ * - Integration with contract API service
+ * 
+ * The component uses react-dropzone for drag-and-drop functionality and
+ * provides real-time feedback during the upload process.
+ * 
+ * @param onUploadSuccess - Callback function triggered when upload succeeds
+ * @param onUploadError - Callback function triggered when upload fails
+ */
 const FileUpload: React.FC<FileUploadProps> = ({ onUploadSuccess, onUploadError }) => {
   const [isUploading, setIsUploading] = useState(false);
   const [uploadStatus, setUploadStatus] = useState<'idle' | 'success' | 'error'>('idle');

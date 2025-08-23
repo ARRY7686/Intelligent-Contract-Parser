@@ -24,7 +24,40 @@ async def upload_contract(
     background_tasks: BackgroundTasks,
     file: UploadFile = File(...)
 ):
-    """Upload a contract file for processing."""
+    """
+    Upload a contract PDF file for processing and analysis.
+    
+    This endpoint handles contract file uploads and initiates the processing pipeline.
+    It performs validation, saves the file, creates a database record, and starts
+    background processing using the ContractProcessor.
+    
+    Processing Steps:
+    1. File Validation: Ensures the file is a PDF and within size limits
+    2. File Storage: Saves the PDF to the uploads directory with a unique ID
+    3. Database Record: Creates a contract record with pending status
+    4. Background Processing: Starts async contract analysis in the background
+    
+    File Requirements:
+    - File type: PDF only
+    - File size: Must be within configured maximum size limit
+    - File content: Must be a valid PDF document
+    
+    Error Handling:
+    - Invalid file type: Returns 400 Bad Request
+    - File too large: Returns 400 Bad Request with size limit
+    - File save error: Returns 500 Internal Server Error
+    - Database error: Returns 500 Internal Server Error (cleans up saved file)
+    
+    Args:
+        background_tasks (BackgroundTasks): FastAPI background tasks for async processing
+        file (UploadFile): The PDF file to be uploaded and processed
+        
+    Returns:
+        ContractUploadResponse: Contains contract ID, success message, and initial status
+        
+    Raises:
+        HTTPException: For validation errors, file save errors, or database errors
+    """
     
     # Validate file type
     if not file.filename.lower().endswith('.pdf'):
@@ -89,7 +122,47 @@ async def list_contracts(
     status: Optional[ProcessingStatus] = None,
     search: Optional[str] = None
 ):
-    """List all contracts with optional filtering and pagination."""
+    """
+    Retrieve a paginated list of contracts with optional filtering and search.
+    
+    This endpoint provides a comprehensive view of all contracts in the system,
+    supporting pagination, status filtering, and text search capabilities.
+    
+    Features:
+    - Pagination: Supports page-based navigation with configurable page sizes
+    - Status Filtering: Filter contracts by processing status (pending, processing, completed, failed)
+    - Text Search: Search contracts by filename using case-insensitive matching
+    - Sorting: Results are sorted by creation date (newest first)
+    
+    Query Parameters:
+    - page: Page number (minimum 1, default 1)
+    - page_size: Number of contracts per page (1-100, default 10)
+    - status: Filter by processing status (optional)
+    - search: Search term for filename matching (optional)
+    
+    Response Data:
+    - contracts: List of contract objects with metadata and extracted data
+    - total: Total number of contracts matching the filter criteria
+    - page: Current page number
+    - page_size: Number of contracts per page
+    - total_pages: Total number of pages available
+    
+    Error Handling:
+    - Database errors: Returns 500 Internal Server Error
+    - Invalid data: Skips problematic contracts and continues processing
+    
+    Args:
+        page (int): Page number for pagination
+        page_size (int): Number of contracts per page
+        status (ProcessingStatus, optional): Filter by processing status
+        search (str, optional): Search term for filename filtering
+        
+    Returns:
+        ContractListResponse: Paginated list of contracts with metadata
+        
+    Raises:
+        HTTPException: For database errors or invalid query parameters
+    """
     
     try:
         collection = get_collection("contracts")
@@ -156,7 +229,44 @@ async def list_contracts(
 
 @router.get("/{contract_id}/status", response_model=ContractStatus)
 async def get_contract_status(contract_id: str):
-    """Get the processing status of a contract."""
+    """
+    Retrieve the current processing status of a specific contract.
+    
+    This endpoint provides real-time status information for contract processing,
+    allowing the frontend to display progress indicators and handle processing states.
+    
+    Status Information:
+    - Current status: pending, processing, completed, or failed
+    - Progress percentage: Numerical indicator (0-100) of processing completion
+    - Error messages: Detailed error information if processing failed
+    - Timestamps: Creation, update, start, and completion times
+    
+    Use Cases:
+    - Progress tracking: Display real-time processing progress to users
+    - Error handling: Show error messages when processing fails
+    - Status polling: Frontend can poll this endpoint to update UI
+    - Processing completion: Determine when to fetch final contract data
+    
+    Response Data:
+    - contract_id: Unique identifier for the contract
+    - status: Current processing status
+    - progress_percentage: Processing completion percentage
+    - error_message: Error details if processing failed
+    - timestamps: Various processing timestamps
+    
+    Error Handling:
+    - Contract not found: Returns 404 Not Found
+    - Database errors: Returns 500 Internal Server Error
+    
+    Args:
+        contract_id (str): Unique identifier for the contract
+        
+    Returns:
+        ContractStatus: Current status and progress information for the contract
+        
+    Raises:
+        HTTPException: For contract not found or database errors
+    """
     
     try:
         collection = get_collection("contracts")
@@ -185,7 +295,42 @@ async def get_contract_status(contract_id: str):
 
 @router.get("/{contract_id}/download")
 async def download_contract(contract_id: str):
-    """Download the original contract file."""
+    """
+    Download the original PDF contract file.
+    
+    This endpoint allows users to download the original contract file that was uploaded
+    for processing. It provides secure file access with proper error handling.
+    
+    File Access:
+    - Validates contract exists in database
+    - Checks if file exists in storage
+    - Returns file with original filename and PDF content type
+    - Provides secure file streaming response
+    
+    Security Features:
+    - Contract ID validation: Ensures only valid contracts can be downloaded
+    - File existence check: Prevents access to non-existent files
+    - Original filename preservation: Maintains user-friendly file names
+    
+    Response:
+    - File stream: Direct file download with PDF content type
+    - Filename: Original uploaded filename
+    - Content-Type: application/pdf
+    
+    Error Handling:
+    - Contract not found: Returns 404 Not Found
+    - File not found: Returns 404 Not Found (file deleted but record exists)
+    - Database errors: Returns 500 Internal Server Error
+    
+    Args:
+        contract_id (str): Unique identifier for the contract to download
+        
+    Returns:
+        FileResponse: Streaming file response with PDF content
+        
+    Raises:
+        HTTPException: For contract not found, file not found, or database errors
+    """
     
     try:
         collection = get_collection("contracts")
@@ -214,7 +359,52 @@ async def download_contract(contract_id: str):
 
 @router.get("/{contract_id}", response_model=Contract)
 async def get_contract_data(contract_id: str):
-    """Get the parsed contract data."""
+    """
+    Retrieve the complete parsed contract data and analysis results.
+    
+    This endpoint provides access to the full contract analysis results including
+    extracted data, confidence scores, and gap analysis. It's only available for
+    contracts that have completed processing successfully.
+    
+    Extracted Data Includes:
+    - Party Information: Disclosing/receiving parties, employers/employees, customers/vendors
+    - Financial Details: Contract values, line items, salaries, compensation
+    - Payment Terms: Payment schedules, methods, terms
+    - Revenue Classification: Contract type, billing cycles, auto-renewal
+    - SLA Information: Performance metrics, support terms, penalty clauses
+    - Gap Analysis: Missing fields, critical gaps, recommendations
+    
+    Data Quality:
+    - Confidence Scores: Individual confidence scores for each data category
+    - Overall Score: Weighted confidence score (0-100) for entire contract
+    - Gap Analysis: Identified missing information and improvement recommendations
+    
+    Access Control:
+    - Only available for completed contracts
+    - Returns error for pending, processing, or failed contracts
+    - Ensures data quality by requiring successful processing
+    
+    Response Data:
+    - Contract metadata: ID, filename, size, timestamps
+    - Processing status: Current status and completion information
+    - Extracted data: Complete structured data from contract analysis
+    - Confidence scores: Quality indicators for extracted data
+    - Gap analysis: Missing information and recommendations
+    
+    Error Handling:
+    - Contract not found: Returns 404 Not Found
+    - Processing incomplete: Returns 400 Bad Request with current status
+    - Database errors: Returns 500 Internal Server Error
+    
+    Args:
+        contract_id (str): Unique identifier for the contract
+        
+    Returns:
+        Contract: Complete contract object with extracted data and analysis
+        
+    Raises:
+        HTTPException: For contract not found, incomplete processing, or database errors
+    """
     
     try:
         collection = get_collection("contracts")
@@ -250,7 +440,47 @@ async def get_contract_data(contract_id: str):
 
 @router.delete("/delete/{contract_id}")
 async def delete_contract(contract_id: str):
-    """Delete a contract and its associated file."""
+    """
+    Delete a contract and its associated file from the system.
+    
+    This endpoint provides complete contract removal functionality, deleting both
+    the database record and the associated PDF file. It ensures data cleanup
+    and prevents orphaned files.
+    
+    Deletion Process:
+    1. Database Record: Removes the contract record from MongoDB
+    2. File Cleanup: Deletes the associated PDF file from storage
+    3. Error Handling: Continues with database deletion even if file deletion fails
+    4. Validation: Ensures contract exists before attempting deletion
+    
+    Security Features:
+    - Contract ID validation: Ensures only valid contracts can be deleted
+    - File existence check: Handles cases where file was already deleted
+    - Graceful degradation: Continues deletion even if file operations fail
+    
+    Cleanup Operations:
+    - Database cleanup: Removes contract metadata and extracted data
+    - File system cleanup: Removes PDF file from uploads directory
+    - Logging: Records successful deletions and any errors
+    
+    Response:
+    - Success message: Confirms deletion with contract ID
+    - Contract ID: Returns the ID of the deleted contract
+    
+    Error Handling:
+    - Contract not found: Returns 404 Not Found
+    - File deletion errors: Logs error but continues with database deletion
+    - Database errors: Returns 500 Internal Server Error
+    
+    Args:
+        contract_id (str): Unique identifier for the contract to delete
+        
+    Returns:
+        dict: Success message and deleted contract ID
+        
+    Raises:
+        HTTPException: For contract not found or database errors
+    """
     
     try:
         collection = get_collection("contracts")
@@ -286,7 +516,52 @@ async def delete_contract(contract_id: str):
 
 
 async def process_contract_background(contract_id: str, file_path: str):
-    """Background task to process contract."""
+    """
+    Background task to process contract analysis asynchronously.
+    
+    This function runs in the background after a contract is uploaded, performing
+    the complete contract analysis pipeline without blocking the API response.
+    It handles the entire processing workflow and updates the contract status.
+    
+    Processing Pipeline:
+    1. Contract Analysis: Uses ContractProcessor to extract structured data
+    2. Data Extraction: Performs contract type detection and data extraction
+    3. Confidence Scoring: Calculates quality scores for extracted data
+    4. Gap Analysis: Identifies missing information and provides recommendations
+    5. Status Updates: Updates database with results and completion status
+    
+    Processing Steps:
+    - Text extraction from PDF
+    - Contract type detection (NDA, Employment, Service)
+    - Party identification and classification
+    - Financial details extraction
+    - Payment terms analysis
+    - Revenue classification
+    - SLA information extraction
+    - Confidence score calculation
+    - Gap analysis and recommendations
+    
+    Status Management:
+    - Success: Updates status to COMPLETED with extracted data
+    - Failure: Updates status to FAILED with error message
+    - Progress: Real-time progress updates during processing
+    
+    Error Handling:
+    - Processing errors: Logs error and updates status to FAILED
+    - Database errors: Logs error but doesn't re-raise (background task)
+    - File errors: Handles file access issues gracefully
+    
+    Args:
+        contract_id (str): Unique identifier for the contract being processed
+        file_path (str): Path to the PDF file to be analyzed
+        
+    Returns:
+        None: Updates contract status in database
+        
+    Note:
+        This function runs asynchronously and doesn't return values directly.
+        Results are stored in the database and can be retrieved via API endpoints.
+    """
     try:
         processor = ContractProcessor()
         extracted_data = await processor.process_contract(contract_id, file_path)

@@ -14,13 +14,58 @@ logger = logging.getLogger(__name__)
 
 
 class ContractProcessor:
+    """
+    Main contract processing engine that extracts structured data from PDF contracts.
+    
+    This class handles the complete pipeline of contract analysis including:
+    - PDF text extraction
+    - Contract type detection (NDA, Employment, Service)
+    - Context-aware data extraction based on contract type
+    - Confidence scoring and gap analysis
+    
+    The processor uses pattern matching and NLP techniques to extract:
+    - Party information (disclosing/receiving parties, employers/employees, customers/vendors)
+    - Financial details (contract values, line items, salaries)
+    - Payment terms and methods
+    - Revenue classification and billing cycles
+    - Service Level Agreements (SLA) and performance metrics
+    """
+    
     def __init__(self):
+        """
+        Initialize the ContractProcessor with empty state.
+        
+        Attributes:
+            text_content (str): Raw text extracted from the PDF contract
+            extracted_data (ContractData): Structured data extracted from the contract
+            contract_type (str): Detected contract type (nda, employment, service, unknown)
+        """
         self.text_content = ""
         self.extracted_data = None
         self.contract_type = "unknown"  # Add contract type detection
         
     async def process_contract(self, contract_id: str, file_path: str) -> ContractData:
-        """Main processing method for contract analysis."""
+        """
+        Main processing method that orchestrates the complete contract analysis pipeline.
+        
+        This method performs the following steps:
+        1. Extracts text from the PDF file
+        2. Detects the contract type (NDA, Employment, Service)
+        3. Extracts all relevant data based on contract type
+        4. Calculates confidence scores
+        5. Performs gap analysis
+        6. Updates processing status throughout the pipeline
+        
+        Args:
+            contract_id (str): Unique identifier for the contract being processed
+            file_path (str): Path to the PDF file to be analyzed
+            
+        Returns:
+            ContractData: Complete structured data extracted from the contract
+            
+        Raises:
+            Exception: If any step in the processing pipeline fails
+        """
         try:
             # Initialize extracted data
             self.extracted_data = ContractData()
@@ -79,7 +124,23 @@ class ContractProcessor:
             raise
     
     def _detect_contract_type(self) -> str:
-        """Detect the type of contract based on content analysis."""
+        """
+        Automatically detect the type of contract based on content analysis.
+        
+        This method uses pattern matching to identify contract types by analyzing
+        the presence of specific keywords and phrases in the contract text.
+        
+        Detection Logic:
+        - NDA Contracts: Looks for confidentiality, non-disclosure, disclosing/receiving party terms
+        - Employment Contracts: Searches for employment, salary, job title, benefits terms
+        - Service Contracts: Identifies service, consulting, SLA, vendor terms
+        
+        The method counts pattern matches for each contract type and returns
+        the type with the highest count (minimum 2 matches required).
+        
+        Returns:
+            str: Contract type identifier ('nda', 'employment', 'service', or 'unknown')
+        """
         text_lower = self.text_content.lower()
         
         # NDA detection patterns
@@ -126,7 +187,22 @@ class ContractProcessor:
             return "unknown"
     
     async def _extract_text_from_pdf(self, file_path: str) -> str:
-        """Extract text content from PDF file."""
+        """
+        Extract raw text content from a PDF file using PyPDF2.
+        
+        This method reads the PDF file and extracts text from all pages,
+        concatenating them into a single string. The extracted text is used
+        as the basis for all subsequent analysis and pattern matching.
+        
+        Args:
+            file_path (str): Path to the PDF file to extract text from
+            
+        Returns:
+            str: Complete text content extracted from all PDF pages
+            
+        Raises:
+            Exception: If PDF reading or text extraction fails
+        """
         try:
             with open(file_path, 'rb') as file:
                 pdf_reader = PyPDF2.PdfReader(file)
@@ -139,7 +215,33 @@ class ContractProcessor:
             raise
     
     async def _extract_parties(self):
-        """Extract party information from contract text."""
+        """
+        Extract party information from contract text based on contract type.
+        
+        This method uses different extraction strategies depending on the detected
+        contract type to identify relevant parties:
+        
+        NDA Contracts:
+        - Disclosing party (company providing confidential information)
+        - Receiving party (individual/company receiving confidential information)
+        - Company name patterns and legal entities
+        
+        Employment Contracts:
+        - Employer (company hiring)
+        - Employee (person being hired)
+        - Job titles and positions
+        
+        Service Contracts:
+        - Customer/client (buying services)
+        - Vendor/supplier (providing services)
+        - Third parties and subcontractors
+        
+        The method applies pattern matching, cleans up extracted names,
+        removes duplicates, and assigns appropriate party types.
+        
+        Returns:
+            None: Updates self.extracted_data.parties with extracted party information
+        """
         parties = []
         
         if self.contract_type == "nda":
@@ -204,7 +306,31 @@ class ContractProcessor:
         self.extracted_data.parties = unique_parties[:5]  # Limit to 5 parties
     
     def _determine_party_type(self, party_name: str) -> str:
-        """Determine the type of party based on context and contract type."""
+        """
+        Determine the type of party based on context and contract type.
+        
+        This method analyzes the party name and contract context to assign
+        the appropriate party type. The logic varies by contract type:
+        
+        NDA Contracts:
+        - Analyzes context around "disclosing party" and "receiving party" terms
+        - Uses company name patterns (Technologies, Solutions, Inc, LLC) to identify disclosing parties
+        - Defaults to receiving party for individuals/consultants
+        
+        Employment Contracts:
+        - Identifies employers (companies) vs employees (individuals)
+        - Uses keywords like "employer", "company", "employee", "candidate"
+        
+        Service Contracts:
+        - Categorizes as customer/client, vendor/supplier, or third party
+        - Uses business role keywords to determine relationship
+        
+        Args:
+            party_name (str): Name of the party to categorize
+            
+        Returns:
+            str: Party type identifier (disclosing_party, receiving_party, employer, employee, customer, vendor, third_party)
+        """
         text_lower = self.text_content.lower()
         party_lower = party_name.lower()
         
@@ -247,7 +373,28 @@ class ContractProcessor:
             return 'third_party'
     
     async def _extract_account_info(self):
-        """Extract account and billing information."""
+        """
+        Extract account and billing information from contract text.
+        
+        This method searches for account numbers, contract IDs, and billing contact
+        information using pattern matching. It handles different contract types:
+        
+        Account Numbers/IDs:
+        - Account numbers with various formats (ACC-123, Account #456, etc.)
+        - Contract IDs and reference numbers
+        - Customer account identifiers
+        
+        Billing Contacts:
+        - Service contracts: billing contacts, addresses, bill-to information
+        - Employment contracts: employee and employer contact details
+        - NDA contracts: disclosing and receiving party contact information
+        - General contact information for any contract type
+        
+        The method sets confidence scores based on the quality of extracted data.
+        
+        Returns:
+            None: Updates self.extracted_data.account_info with extracted account information
+        """
         account_info = AccountInfo(confidence_score=0.0)
         
         # Enhanced account number patterns - handle different contract types
@@ -300,7 +447,30 @@ class ContractProcessor:
         self.extracted_data.account_info = account_info
     
     async def _extract_financial_details(self):
-        """Extract financial information including line items."""
+        """
+        Extract financial information including contract values and line items.
+        
+        This method extracts financial data based on contract type:
+        
+        Service Contracts:
+        - Total contract value, annual contract value
+        - Line items with descriptions and prices
+        - Currency information
+        
+        Employment Contracts:
+        - Salary information (annual, base, compensation)
+        - Benefits and compensation packages
+        - Employment-related financial terms
+        
+        The method uses pattern matching to find financial values and validates
+        line item descriptions to ensure they are meaningful business terms.
+        
+        Note: NDA contracts are handled separately in the main processing pipeline
+        and are set to have no financial terms with 100% confidence.
+        
+        Returns:
+            None: Updates self.extracted_data.financial_details with extracted financial information
+        """
         financial_details = FinancialDetails(confidence_score=0.0)
         
         # Enhanced total contract value patterns - handle different contract types
@@ -344,7 +514,30 @@ class ContractProcessor:
         self.extracted_data.financial_details = financial_details
     
     def _extract_line_items(self) -> List[LineItem]:
-        """Extract line items from contract text."""
+        """
+        Extract line items from contract text with validation.
+        
+        This method searches for financial line items in the contract text and
+        validates them to ensure they represent meaningful business transactions.
+        
+        Line Item Patterns:
+        - Service contracts: "5 x Consulting Services @ $100"
+        - Employment benefits: "Health Insurance: $500/month"
+        - General items: "Software License $1000 per year"
+        
+        Validation Process:
+        1. Skips NDA contracts (no financial line items expected)
+        2. Filters out very short descriptions (< 5 characters)
+        3. Rejects meaningless text fragments (random words, common phrases)
+        4. Validates against meaningful business terms
+        5. Ensures price values are valid numbers
+        
+        Args:
+            None: Uses self.text_content and self.contract_type
+            
+        Returns:
+            List[LineItem]: List of validated line items (limited to 10 items)
+        """
         line_items = []
         
         # Skip line item extraction for NDAs as they typically don't have financial line items
@@ -388,7 +581,31 @@ class ContractProcessor:
         return line_items[:10]  # Limit to 10 line items
     
     def _is_valid_line_item_description(self, description: str) -> bool:
-        """Validate if a line item description is meaningful."""
+        """
+        Validate if a line item description represents a meaningful business transaction.
+        
+        This method filters out random text fragments and ensures line items
+        contain legitimate business terms that would appear in contracts.
+        
+        Validation Criteria:
+        1. Minimum length: 5 characters
+        2. Rejects patterns that are just random words
+        3. Rejects descriptions starting with common words (the, this, that, etc.)
+        4. Rejects descriptions with no letters
+        5. Must contain at least one meaningful business term
+        
+        Meaningful Business Terms:
+        - Service-related: service, product, license, support, maintenance, consulting
+        - Development: development, training, software, hardware, equipment
+        - Time-based: labor, hour, day, month, year
+        - Project-related: project, work, deliverable, materials
+        
+        Args:
+            description (str): The line item description to validate
+            
+        Returns:
+            bool: True if the description is meaningful, False otherwise
+        """
         description_lower = description.lower().strip()
         
         # Skip very short descriptions
@@ -416,7 +633,32 @@ class ContractProcessor:
         return any(term in description_lower for term in meaningful_terms)
     
     async def _extract_payment_terms(self):
-        """Extract payment terms and conditions."""
+        """
+        Extract payment terms and conditions based on contract type.
+        
+        This method handles payment terms differently based on the detected contract type:
+        
+        NDA Contracts:
+        - Sets 100% confidence that NDAs have no payment terms
+        - Marks payment terms as "No payment terms - NDA agreement"
+        - Sets payment method as "Not applicable"
+        
+        Service Contracts:
+        - Extracts payment terms (Net 30, Net 60, etc.)
+        - Identifies payment methods (bank transfer, check, credit card)
+        - Finds payment schedules and due dates
+        
+        Employment Contracts:
+        - Extracts salary payment schedules (bi-weekly, monthly, weekly)
+        - Identifies payment methods for salary disbursement
+        - Finds employment-related payment terms
+        
+        The method uses pattern matching to find payment-related information
+        and sets appropriate confidence scores based on extraction success.
+        
+        Returns:
+            None: Updates self.extracted_data.payment_terms with extracted payment information
+        """
         payment_terms = PaymentTerms(confidence_score=0.0)
         
         if self.contract_type == "nda":
@@ -466,7 +708,34 @@ class ContractProcessor:
         self.extracted_data.payment_terms = payment_terms
     
     async def _extract_revenue_classification(self):
-        """Extract revenue classification information."""
+        """
+        Extract revenue classification and contract structure information.
+        
+        This method analyzes the contract to determine:
+        
+        Payment Type Classification:
+        - NDA: One-time agreements with no recurring payments
+        - Employment: Recurring salary payments
+        - Service: Recurring or one-time service payments
+        - Subscription: Monthly, quarterly, or annual recurring payments
+        
+        Billing Cycle Detection:
+        - One-time: Single payment contracts
+        - Monthly: Monthly recurring payments
+        - Quarterly: Quarterly recurring payments
+        - Annually: Annual recurring payments
+        - Recurring: General recurring payment structure
+        
+        Contract Features:
+        - Auto-renewal: Detects automatic renewal clauses
+        - Contract Duration: Extracts contract term length in months/years
+        
+        The method uses pattern matching to identify these characteristics
+        and sets appropriate confidence scores based on detection success.
+        
+        Returns:
+            None: Updates self.extracted_data.revenue_classification with extracted revenue information
+        """
         revenue = RevenueClassification(confidence_score=0.0)
         
         # Enhanced payment type detection - handle different contract types
@@ -515,7 +784,48 @@ class ContractProcessor:
         self.extracted_data.revenue_classification = revenue
     
     async def _extract_sla_info(self):
-        """Extract SLA and performance information."""
+        """
+        Extract Service Level Agreement (SLA) and performance information.
+        
+        This method uses comprehensive pattern matching to extract SLA metrics
+        from contract text, handling various formats and PDF text extraction quirks.
+        
+        Performance Metrics Extracted:
+        
+        Uptime & Availability:
+        - Uptime guarantees (e.g., "99.9% monthly availability")
+        - Availability targets and commitments
+        - Monthly availability percentages
+        
+        Response Times:
+        - General response time commitments
+        - Priority-based response times (Critical, High, Medium, Low)
+        - P1/P2 priority classifications
+        - Resolution time commitments
+        
+        SLA Compliance:
+        - SLA percentage targets
+        - Service level compliance metrics
+        - Performance benchmarks
+        
+        System Performance:
+        - System response time targets
+        - Request success rates
+        - Backup success rates
+        - Security patch deployment times
+        
+        Support & Maintenance:
+        - Support hours and availability
+        - Maintenance windows and schedules
+        - Service credits and penalty clauses
+        - Escalation procedures
+        
+        The method uses ultra-flexible regex patterns to handle PDF text formatting
+        variations and calculates confidence scores based on extracted data quality.
+        
+        Returns:
+            None: Updates self.extracted_data.sla_info with extracted SLA information
+        """
         sla_info = SLAInfo(confidence_score=0.0)
         
         # Comprehensive performance metrics patterns - ultra flexible for PDF formatting
@@ -684,7 +994,34 @@ class ContractProcessor:
         self.extracted_data.sla_info = sla_info
     
     def _calculate_confidence_score(self) -> float:
-        """Calculate overall confidence score based on extracted data."""
+        """
+        Calculate overall confidence score based on extracted data quality.
+        
+        This method evaluates the completeness and quality of extracted contract data
+        using a weighted scoring system (0-100 points). The scoring adapts based on
+        contract type to provide meaningful assessments.
+        
+        Scoring Components:
+        
+        Standard Contracts (Service/Employment):
+        - Financial completeness: 30 points (contract value or line items)
+        - Party identification: 25 points (customer/vendor, employer/employee)
+        - Payment terms clarity: 20 points (payment schedules, methods)
+        - SLA definition: 15 points (performance metrics, support terms)
+        - Contact information: 10 points (billing contacts, account numbers)
+        
+        NDA Contracts:
+        - Party identification: 40 points (disclosing/receiving parties)
+        - NDA-specific elements: 30 points (confidentiality terms)
+        - Contact information: 20 points (party contact details)
+        - Contract structure: 10 points (agreement format)
+        
+        The method returns a score from 0-100, where higher scores indicate
+        more complete and reliable contract data extraction.
+        
+        Returns:
+            float: Overall confidence score (0-100) indicating data extraction quality
+        """
         scores = []
         
         # Financial completeness (30 points)
@@ -724,7 +1061,35 @@ class ContractProcessor:
         return sum(scores)
     
     def _perform_gap_analysis(self) -> GapAnalysis:
-        """Perform gap analysis to identify missing critical fields."""
+        """
+        Perform gap analysis to identify missing critical fields and provide recommendations.
+        
+        This method analyzes the extracted contract data to identify gaps and missing
+        information that could impact contract completeness and compliance.
+        
+        Gap Analysis by Contract Type:
+        
+        NDA Contracts:
+        - Critical Gaps: Missing disclosing/receiving party information
+        - Missing Fields: Undefined confidentiality periods, missing non-disclosure obligations
+        - Recommendations: Use standard NDA templates, ensure confidentiality definitions
+        
+        Service Contracts:
+        - Critical Gaps: Missing financial terms, payment structures, party information
+        - Missing Fields: Incomplete SLA metrics, missing support terms, undefined penalties
+        - Recommendations: Add specific SLA performance metrics, define escalation procedures
+        
+        Employment Contracts:
+        - Critical Gaps: Missing salary information, employment terms
+        - Missing Fields: Undefined benefits, missing start dates, unclear payment schedules
+        - Recommendations: Include comprehensive benefits package, define employment terms
+        
+        The method provides actionable recommendations for improving contract completeness
+        and suggests template-based approaches for better contract structure.
+        
+        Returns:
+            GapAnalysis: Object containing critical gaps, missing fields, and recommendations
+        """
         gaps = GapAnalysis()
         
         if self.contract_type == "nda":
@@ -822,7 +1187,38 @@ class ContractProcessor:
         return gaps
     
     async def _update_status(self, contract_id: str, status: str, progress: float, error_message: str = None):
-        """Update contract processing status in database."""
+        """
+        Update contract processing status in the database.
+        
+        This method provides real-time status updates during contract processing,
+        allowing the frontend to display progress and handle errors appropriately.
+        
+        Status Updates:
+        - Processing progress: Updates percentage completion (0-100)
+        - Processing start: Records when processing begins
+        - Processing completion: Records when processing finishes
+        - Error handling: Captures and stores error messages for failed processing
+        
+        Database Updates:
+        - status: Current processing status (pending, processing, completed, failed)
+        - progress_percentage: Numerical progress indicator
+        - updated_at: Timestamp of last status update
+        - processing_started_at: Timestamp when processing began
+        - processing_completed_at: Timestamp when processing finished
+        - error_message: Detailed error information if processing failed
+        
+        Args:
+            contract_id (str): Unique identifier for the contract being processed
+            status (str): Current processing status
+            progress (float): Progress percentage (0-100)
+            error_message (str, optional): Error message if processing failed
+            
+        Returns:
+            None: Updates the contract record in the database
+            
+        Raises:
+            Exception: If database update fails (logged but not re-raised)
+        """
         try:
             collection = get_collection("contracts")
             update_data = {

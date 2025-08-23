@@ -11,6 +11,23 @@ interface DashboardProps {
   refreshTrigger: number;
 }
 
+/**
+ * Main dashboard component that provides the primary interface for contract management.
+ * 
+ * This component serves as the central hub for contract operations, featuring:
+ * - Statistics overview with key metrics
+ * - Tabbed interface for upload and contract list views
+ * - Integration with file upload and contract list components
+ * - Real-time status tracking and updates
+ * 
+ * The dashboard displays contract statistics, provides upload functionality,
+ * and shows a comprehensive list of all contracts with filtering capabilities.
+ * 
+ * @param onUploadSuccess - Callback function triggered when contract upload succeeds
+ * @param onUploadError - Callback function triggered when contract upload fails
+ * @param onContractSelect - Callback function triggered when a contract is selected
+ * @param refreshTrigger - Number that triggers contract list refresh when changed
+ */
 const Dashboard: React.FC<DashboardProps> = ({
   onUploadSuccess,
   onUploadError,

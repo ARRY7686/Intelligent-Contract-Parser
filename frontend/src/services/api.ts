@@ -16,9 +16,25 @@ const api = axios.create({
   },
 });
 
-// Contract API functions
+/**
+ * Contract API service providing all contract-related API operations.
+ * 
+ * This service handles all communication with the backend API endpoints
+ * for contract management, including upload, retrieval, status checking,
+ * and deletion operations.
+ */
 export const contractApi = {
-  // Upload contract
+  /**
+   * Upload a contract PDF file for processing and analysis.
+   * 
+   * This function handles the file upload process by creating a FormData
+   * object and sending it to the backend upload endpoint. It supports
+   * PDF files and provides progress tracking through the response.
+   * 
+   * @param file - The PDF file to be uploaded and processed
+   * @returns Promise containing the upload response with contract ID and status
+   * @throws Error if upload fails or file is invalid
+   */
   uploadContract: async (file: File): Promise<ContractUploadResponse> => {
     const formData = new FormData();
     formData.append('file', file);
@@ -32,19 +48,52 @@ export const contractApi = {
     return response.data;
   },
 
-  // Get contract status
+  /**
+   * Retrieve the current processing status of a specific contract.
+   * 
+   * This function fetches real-time status information for contract processing,
+   * including progress percentage, error messages, and processing timestamps.
+   * Used for displaying progress indicators and handling processing states.
+   * 
+   * @param contractId - Unique identifier for the contract
+   * @returns Promise containing the contract status information
+   * @throws Error if contract not found or API call fails
+   */
   getContractStatus: async (contractId: string): Promise<ContractStatus> => {
     const response = await api.get(`/contracts/${contractId}/status`);
     return response.data;
   },
 
-  // Get contract data
+  /**
+   * Retrieve the complete parsed contract data and analysis results.
+   * 
+   * This function fetches the full contract analysis results including
+   * extracted data, confidence scores, and gap analysis. Only available
+   * for contracts that have completed processing successfully.
+   * 
+   * @param contractId - Unique identifier for the contract
+   * @returns Promise containing the complete contract object with extracted data
+   * @throws Error if contract not found, processing incomplete, or API call fails
+   */
   getContractData: async (contractId: string): Promise<Contract> => {
     const response = await api.get(`/contracts/${contractId}`);
     return response.data;
   },
 
-  // List contracts
+  /**
+   * Retrieve a paginated list of contracts with optional filtering and search.
+   * 
+   * This function fetches a comprehensive view of all contracts in the system,
+   * supporting pagination, status filtering, and text search capabilities.
+   * Results are sorted by creation date (newest first).
+   * 
+   * @param page - Page number for pagination (default: 1)
+   * @param pageSize - Number of contracts per page (default: 10)
+   * @param status - Optional filter by processing status
+   * @param search - Optional search term for filename matching
+   * @returns Promise containing paginated list of contracts with metadata
+   * @throws Error if API call fails or invalid parameters provided
+   */
   listContracts: async (
     page: number = 1,
     pageSize: number = 10,
@@ -68,7 +117,17 @@ export const contractApi = {
     return response.data;
   },
 
-  // Download contract
+  /**
+   * Download the original PDF contract file.
+   * 
+   * This function downloads the original contract file that was uploaded
+   * for processing. It returns a Blob object that can be used to create
+   * a download link or save the file locally.
+   * 
+   * @param contractId - Unique identifier for the contract to download
+   * @returns Promise containing the file as a Blob object
+   * @throws Error if contract not found, file not found, or API call fails
+   */
   downloadContract: async (contractId: string): Promise<Blob> => {
     const response = await api.get(`/contracts/${contractId}/download`, {
       responseType: 'blob',
@@ -76,14 +135,36 @@ export const contractApi = {
     return response.data;
   },
 
-                         // Delete contract
-           deleteContract: async (contractId: string): Promise<{ message: string; contract_id: string }> => {
+  /**
+   * Delete a contract and its associated file from the system.
+   * 
+   * This function removes both the contract record from the database
+   * and the associated PDF file from storage. It ensures complete
+   * cleanup and prevents orphaned files.
+   * 
+   * @param contractId - Unique identifier for the contract to delete
+   * @returns Promise containing success message and deleted contract ID
+   * @throws Error if contract not found or API call fails
+   */
+  deleteContract: async (contractId: string): Promise<{ message: string; contract_id: string }> => {
              const response = await api.delete(`/contracts/delete/${contractId}`);
              return response.data;
            },
 };
 
-// Utility functions
+/**
+ * Utility functions for data formatting and manipulation.
+ */
+
+/**
+ * Format file size in bytes to human-readable format.
+ * 
+ * This function converts byte values to appropriate units (Bytes, KB, MB, GB)
+ * with proper decimal formatting for better readability.
+ * 
+ * @param bytes - File size in bytes
+ * @returns Formatted string with appropriate unit (e.g., "1.5 MB")
+ */
 export const formatFileSize = (bytes: number): string => {
   if (bytes === 0) return '0 Bytes';
   
@@ -94,6 +175,15 @@ export const formatFileSize = (bytes: number): string => {
   return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
 };
 
+/**
+ * Format date string to localized readable format.
+ * 
+ * This function converts ISO date strings to a user-friendly format
+ * using the browser's locale settings for consistent date display.
+ * 
+ * @param dateString - ISO date string to format
+ * @returns Formatted date string (e.g., "Jan 15, 2024")
+ */
 export const formatDate = (dateString: string): string => {
   return new Date(dateString).toLocaleDateString('en-US', {
     year: 'numeric',
