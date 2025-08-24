@@ -7,7 +7,9 @@ A comprehensive contract intelligence system for automated contract analysis and
 - **Intelligent Contract Type Detection**: Automatically identifies NDA, Employment, and Service contracts
 - **Automated Contract Processing**: Upload PDF contracts and extract critical financial and operational data
 - **Real-time Status Tracking**: Monitor processing progress with detailed status updates
+- **Advanced NLP Processing**: Named Entity Recognition (NER) for better party identification
 - **Smart Data Extraction**: Extract party information, financial details, payment terms, and SLAs based on contract type
+- **Machine Learning Classification**: ML-based contract type detection with fuzzy string matching
 - **Confidence Scoring**: Weighted scoring system to assess data completeness and quality
 - **Gap Analysis**: Identify missing critical fields with contract-type-specific recommendations
 - **Modern Web Interface**: React-based frontend with drag-and-drop upload and data visualization
@@ -38,7 +40,7 @@ A comprehensive contract intelligence system for automated contract analysis and
 - **Backend**: Python FastAPI with async processing and background tasks
 - **Database**: MongoDB for document storage and contract metadata
 - **Frontend**: React with TypeScript and Tailwind CSS
-- **File Processing**: PyPDF2 with enhanced text extraction and pattern matching
+- **File Processing**: Advanced PDF processing with PyPDF2, pdfplumber, and OCR capabilities
 - **Deployment**: Docker containers with docker-compose orchestration
 - **Reverse Proxy**: Nginx for static file serving and load balancing
 
