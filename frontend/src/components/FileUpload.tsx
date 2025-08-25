@@ -1,37 +1,16 @@
 import React, { useCallback, useState } from 'react';
 import { useDropzone } from 'react-dropzone';
-import { Upload, FileText, AlertCircle, CheckCircle } from 'lucide-react';
+import { Upload, FileText, AlertCircle, CheckCircle, FileUp } from 'lucide-react';
 import { contractApi } from '../services/api';
-import { ProcessingStatus } from '../types/contract';
 
 interface FileUploadProps {
   onUploadSuccess: (contractId: string) => void;
   onUploadError: (error: string) => void;
 }
 
-/**
- * File upload component with drag-and-drop functionality for contract PDFs.
- * 
- * This component provides an intuitive interface for uploading contract files
- * with comprehensive validation, progress tracking, and error handling.
- * 
- * Features:
- * - Drag-and-drop file upload with visual feedback
- * - File type validation (PDF only)
- * - File size validation (50MB limit)
- * - Upload progress indication
- * - Success and error state management
- * - Integration with contract API service
- * 
- * The component uses react-dropzone for drag-and-drop functionality and
- * provides real-time feedback during the upload process.
- * 
- * @param onUploadSuccess - Callback function triggered when upload succeeds
- * @param onUploadError - Callback function triggered when upload fails
- */
 const FileUpload: React.FC<FileUploadProps> = ({ onUploadSuccess, onUploadError }) => {
   const [isUploading, setIsUploading] = useState(false);
-  const [uploadStatus, setUploadStatus] = useState<'idle' | 'success' | 'error'>('idle');
+  const [uploadStatus, setUploadStatus] = useState<'idle' | 'uploading' | 'success' | 'error'>('idle');
   const [uploadMessage, setUploadMessage] = useState('');
 
   const onDrop = useCallback(async (acceptedFiles: File[]) => {
@@ -56,7 +35,7 @@ const FileUpload: React.FC<FileUploadProps> = ({ onUploadSuccess, onUploadError 
     }
 
     setIsUploading(true);
-    setUploadStatus('idle');
+    setUploadStatus('uploading');
     setUploadMessage('');
 
     try {
@@ -76,95 +55,88 @@ const FileUpload: React.FC<FileUploadProps> = ({ onUploadSuccess, onUploadError 
 
   const { getRootProps, getInputProps, isDragActive, isDragReject } = useDropzone({
     onDrop,
-    accept: {
-      'application/pdf': ['.pdf']
-    },
+    accept: { 'application/pdf': ['.pdf'] },
     maxFiles: 1,
     disabled: isUploading
   });
-
-  const getDropzoneContent = () => {
-    if (isUploading) {
-      return (
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Uploading contract...</p>
-        </div>
-      );
-    }
-
-    if (uploadStatus === 'success') {
-      return (
-        <div className="text-center">
-          <CheckCircle className="h-12 w-12 text-green-500 mx-auto mb-4" />
-          <p className="text-green-600 font-medium">{uploadMessage}</p>
-        </div>
-      );
-    }
-
-    if (uploadStatus === 'error') {
-      return (
-        <div className="text-center">
-          <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
-          <p className="text-red-600 font-medium">{uploadMessage}</p>
-        </div>
-      );
-    }
-
-    if (isDragReject) {
-      return (
-        <div className="text-center">
-          <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
-          <p className="text-red-600 font-medium">Invalid file type. Only PDF files are allowed.</p>
-        </div>
-      );
-    }
-
-    if (isDragActive) {
-      return (
-        <div className="text-center">
-          <Upload className="h-12 w-12 text-blue-500 mx-auto mb-4" />
-          <p className="text-blue-600 font-medium">Drop the contract file here...</p>
-        </div>
-      );
-    }
-
-    return (
-      <div className="text-center">
-        <Upload className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-        <p className="text-gray-600 font-medium mb-2">
-          Drag & drop a contract file here, or click to select
-        </p>
-        <p className="text-gray-500 text-sm">
-          Only PDF files up to 50MB are supported
-        </p>
-      </div>
-    );
-  };
 
   return (
     <div className="w-full max-w-2xl mx-auto">
       <div
         {...getRootProps()}
         className={`
-          border-2 border-dashed rounded-lg p-8 cursor-pointer transition-colors
-          ${isDragActive && !isDragReject ? 'border-blue-500 bg-blue-50' : ''}
-          ${isDragReject ? 'border-red-500 bg-red-50' : ''}
-          ${uploadStatus === 'success' ? 'border-green-500 bg-green-50' : ''}
-          ${uploadStatus === 'error' ? 'border-red-500 bg-red-50' : ''}
-          ${!isDragActive && uploadStatus === 'idle' ? 'border-gray-300 hover:border-gray-400' : ''}
-          ${isUploading ? 'cursor-not-allowed opacity-75' : ''}
+          dark-card p-8 cursor-pointer
+          ${isDragActive ? 'border-accent bg-tertiary' : ''}
+          ${isDragReject ? 'border-error bg-tertiary' : ''}
+          ${uploadStatus === 'uploading' ? 'pointer-events-none' : ''}
         `}
       >
         <input {...getInputProps()} />
-        {getDropzoneContent()}
+
+        {uploadStatus === 'uploading' && (
+          <div className="text-center">
+            <div className="mb-4">
+              <div className="spinner mx-auto"></div>
+            </div>
+            <div>
+              <FileUp className="h-8 w-8 text-accent mx-auto mb-2" />
+            </div>
+            <p className="text-accent font-medium text-lg">Processing your contract...</p>
+            <p className="text-secondary text-sm mt-2">This may take a few moments</p>
+          </div>
+        )}
+
+        {uploadStatus === 'success' && (
+          <div className="text-center">
+            <div className="mb-4">
+              <CheckCircle className="h-16 w-16 text-success mx-auto" />
+            </div>
+            <p className="text-success font-medium text-lg">{uploadMessage}</p>
+          </div>
+        )}
+
+        {uploadStatus === 'error' && (
+          <div className="text-center">
+            <div className="mb-4">
+              <AlertCircle className="h-16 w-16 text-error mx-auto" />
+            </div>
+            <p className="text-error font-medium text-lg">{uploadMessage}</p>
+          </div>
+        )}
+
+        {isDragReject && (
+          <div className="text-center">
+            <div className="mb-4">
+              <AlertCircle className="h-16 w-16 text-error mx-auto" />
+            </div>
+            <p className="text-error font-medium text-lg">Invalid file type. Only PDF files are allowed.</p>
+          </div>
+        )}
+
+        {isDragActive && uploadStatus !== 'uploading' && uploadStatus !== 'success' && uploadStatus !== 'error' && (
+          <div className="text-center">
+            <Upload className="h-16 w-16 text-accent mx-auto mb-4" />
+            <p className="text-accent font-medium text-xl">Drop your contract here</p>
+            <p className="text-secondary text-sm mt-2">Release to upload</p>
+          </div>
+        )}
+
+        {!isDragActive && !isDragReject && uploadStatus !== 'uploading' && uploadStatus !== 'success' && uploadStatus !== 'error' && (
+          <div className="text-center">
+            <Upload className="h-16 w-16 text-secondary mx-auto mb-4" />
+            <FileText className="h-8 w-8 text-secondary mx-auto mb-2" />
+            <p className="text-primary font-medium text-xl mb-2">Upload your contract</p>
+            <p className="text-secondary text-sm">Drag and drop a PDF file here, or click to browse</p>
+            <p className="text-muted text-xs mt-4">Supported format: PDF</p>
+          </div>
+        )}
       </div>
-      
+
       {uploadStatus === 'success' && (
-        <div className="mt-4 p-4 bg-green-50 border border-green-200 rounded-lg">
+        <div className="mt-6 dark-card p-4">
           <div className="flex items-center">
-            <CheckCircle className="h-5 w-5 text-green-500 mr-2" />
-            <p className="text-green-700">
+            <CheckCircle className="h-5 w-5 text-success mr-3" />
+            <p className="text-success">
               Your contract is being processed. You'll be notified when it's ready.
             </p>
           </div>

@@ -10,27 +10,6 @@ interface ContractDetailProps {
 
 /**
  * Contract detail component that displays comprehensive analysis results.
- * 
- * This component provides a detailed view of contract analysis results,
- * including extracted data, confidence scores, and gap analysis. It handles
- * different processing states and provides interactive features for contract
- * management.
- * 
- * Features:
- * - Complete contract analysis display
- * - Confidence score visualization with color coding
- * - Gap analysis with recommendations
- * - Contract download functionality
- * - Contract deletion with confirmation
- * - Loading and error state management
- * - Responsive data visualization
- * 
- * The component displays structured data extracted from contracts including
- * party information, financial details, payment terms, SLA information,
- * and comprehensive gap analysis with actionable recommendations.
- * 
- * @param contract - Contract object containing metadata and analysis data
- * @param onBack - Callback function to navigate back to contract list
  */
 const ContractDetail: React.FC<ContractDetailProps> = ({ contract, onBack }) => {
   const [contractData, setContractData] = useState<ContractData | null>(null);
@@ -81,7 +60,6 @@ const ContractDetail: React.FC<ContractDetailProps> = ({ contract, onBack }) => 
 
     try {
       await contractApi.deleteContract(contract.contract_id);
-      // Go back to the list after successful deletion
       onBack();
     } catch (err: any) {
       alert('Failed to delete contract');
@@ -89,9 +67,9 @@ const ContractDetail: React.FC<ContractDetailProps> = ({ contract, onBack }) => 
   };
 
   const getConfidenceColor = (score: number) => {
-    if (score >= 80) return 'text-green-600';
-    if (score >= 60) return 'text-yellow-600';
-    return 'text-red-600';
+    if (score >= 80) return 'text-success';
+    if (score >= 60) return 'text-warning';
+    return 'text-error';
   };
 
   const getConfidenceIcon = (score: number) => {
@@ -103,7 +81,7 @@ const ContractDetail: React.FC<ContractDetailProps> = ({ contract, onBack }) => 
   if (loading) {
     return (
       <div className="flex justify-center items-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+        <div className="spinner"></div>
       </div>
     );
   }
@@ -111,11 +89,8 @@ const ContractDetail: React.FC<ContractDetailProps> = ({ contract, onBack }) => 
   if (error) {
     return (
       <div className="text-center py-8">
-        <p className="text-red-600 mb-4">{error}</p>
-        <button
-          onClick={loadContractData}
-          className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-        >
+        <p className="text-error mb-4">{error}</p>
+        <button onClick={loadContractData} className="btn-primary">
           Retry
         </button>
       </div>
@@ -125,13 +100,10 @@ const ContractDetail: React.FC<ContractDetailProps> = ({ contract, onBack }) => 
   if (contract.status !== ProcessingStatus.COMPLETED) {
     return (
       <div className="text-center py-8">
-        <p className="text-gray-600 mb-4">
+        <p className="text-secondary mb-4">
           Contract processing is not complete. Current status: {contract.status}
         </p>
-        <button
-          onClick={onBack}
-          className="px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700"
-        >
+        <button onClick={onBack} className="btn-secondary">
           Back to List
         </button>
       </div>
@@ -141,7 +113,7 @@ const ContractDetail: React.FC<ContractDetailProps> = ({ contract, onBack }) => 
   if (!contractData) {
     return (
       <div className="text-center py-8">
-        <p className="text-gray-600">No contract data available</p>
+        <p className="text-secondary">No contract data available</p>
       </div>
     );
   }
@@ -153,26 +125,23 @@ const ContractDetail: React.FC<ContractDetailProps> = ({ contract, onBack }) => 
         <div className="flex items-center gap-4">
           <button
             onClick={onBack}
-            className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+            className="p-2 rounded-lg bg-tertiary border border-dark hover:border-light"
           >
-            <ArrowLeft className="h-5 w-5" />
+            <ArrowLeft className="h-5 w-5 text-primary" />
           </button>
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">{contract.filename}</h1>
-            <p className="text-gray-600">Uploaded on {formatDate(contract.created_at)}</p>
+            <h1 className="text-2xl font-bold text-primary">{contract.filename}</h1>
+            <p className="text-secondary">Uploaded on {formatDate(contract.created_at)}</p>
           </div>
         </div>
         <div className="flex items-center gap-3">
-          <button
-            onClick={handleDownload}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2"
-          >
+          <button onClick={handleDownload} className="btn-primary flex items-center gap-2">
             <Download className="h-4 w-4" />
             Download Original
           </button>
           <button
             onClick={handleDelete}
-            className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 flex items-center gap-2"
+            className="px-4 py-2 bg-red-600 text-white rounded-xl hover:bg-red-700 flex items-center gap-2"
             title="Delete Contract"
           >
             <Trash2 className="h-4 w-4" />
@@ -182,37 +151,40 @@ const ContractDetail: React.FC<ContractDetailProps> = ({ contract, onBack }) => 
       </div>
 
       {/* Overall Score */}
-      <div className="bg-white border border-gray-200 rounded-lg p-6">
+      <div className="dark-card p-6">
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-xl font-semibold text-gray-900">Overall Confidence Score</h2>
+          <h2 className="text-xl font-semibold text-primary">Overall Confidence Score</h2>
           <div className={`flex items-center gap-2 text-2xl font-bold ${getConfidenceColor(contractData.overall_confidence_score)}`}>
             {getConfidenceIcon(contractData.overall_confidence_score)}
             {contractData.overall_confidence_score}/100
           </div>
         </div>
-        <div className="w-full bg-gray-200 rounded-full h-2">
+        <div className="w-full bg-tertiary rounded-full h-3 overflow-hidden border border-dark">
           <div
-            className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+            className="bg-accent h-3 rounded-full"
             style={{ width: `${contractData.overall_confidence_score}%` }}
-          ></div>
+          />
         </div>
       </div>
 
       {/* Gap Analysis */}
       {contractData.gap_analysis && (
-        <div className="bg-white border border-gray-200 rounded-lg p-6">
-          <h2 className="text-xl font-semibold text-gray-900 mb-4">Gap Analysis</h2>
-          
+        <div className="dark-card p-6">
+          <h2 className="text-xl font-semibold text-primary mb-4 flex items-center gap-2">
+            <TrendingUp className="h-5 w-5 text-accent" />
+            Gap Analysis
+          </h2>
+
           {contractData.gap_analysis.critical_gaps.length > 0 && (
             <div className="mb-4">
-              <h3 className="text-lg font-medium text-red-700 mb-2 flex items-center gap-2">
+              <h3 className="text-lg font-medium text-error mb-2 flex items-center gap-2">
                 <XCircle className="h-5 w-5" />
                 Critical Gaps
               </h3>
-              <ul className="space-y-1">
+              <ul className="space-y-2">
                 {contractData.gap_analysis.critical_gaps.map((gap, index) => (
-                  <li key={index} className="text-red-600 flex items-center gap-2">
-                    <span className="w-2 h-2 bg-red-500 rounded-full"></span>
+                  <li key={index} className="text-error flex items-center gap-2">
+                    <span className="w-2 h-2 bg-error rounded-full"></span>
                     {gap}
                   </li>
                 ))}
@@ -222,14 +194,14 @@ const ContractDetail: React.FC<ContractDetailProps> = ({ contract, onBack }) => 
 
           {contractData.gap_analysis.missing_fields.length > 0 && (
             <div className="mb-4">
-              <h3 className="text-lg font-medium text-yellow-700 mb-2 flex items-center gap-2">
+              <h3 className="text-lg font-medium text-warning mb-2 flex items-center gap-2">
                 <AlertTriangle className="h-5 w-5" />
                 Missing Fields
               </h3>
-              <ul className="space-y-1">
+              <ul className="space-y-2">
                 {contractData.gap_analysis.missing_fields.map((field, index) => (
-                  <li key={index} className="text-yellow-600 flex items-center gap-2">
-                    <span className="w-2 h-2 bg-yellow-500 rounded-full"></span>
+                  <li key={index} className="text-warning flex items-center gap-2">
+                    <span className="w-2 h-2 bg-warning rounded-full"></span>
                     {field}
                   </li>
                 ))}
@@ -239,14 +211,14 @@ const ContractDetail: React.FC<ContractDetailProps> = ({ contract, onBack }) => 
 
           {contractData.gap_analysis.recommendations.length > 0 && (
             <div>
-              <h3 className="text-lg font-medium text-blue-700 mb-2 flex items-center gap-2">
+              <h3 className="text-lg font-medium text-accent mb-2 flex items-center gap-2">
                 <TrendingUp className="h-5 w-5" />
                 Recommendations
               </h3>
-              <ul className="space-y-1">
+              <ul className="space-y-2">
                 {contractData.gap_analysis.recommendations.map((rec, index) => (
-                  <li key={index} className="text-blue-600 flex items-center gap-2">
-                    <span className="w-2 h-2 bg-blue-500 rounded-full"></span>
+                  <li key={index} className="text-accent flex items-center gap-2">
+                    <span className="w-2 h-2 bg-accent rounded-full"></span>
                     {rec}
                   </li>
                 ))}
@@ -259,23 +231,23 @@ const ContractDetail: React.FC<ContractDetailProps> = ({ contract, onBack }) => 
       {/* Extracted Data Sections */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Parties */}
-        <div className="bg-white border border-gray-200 rounded-lg p-6">
-          <h2 className="text-xl font-semibold text-gray-900 mb-4">Parties</h2>
+        <div className="dark-card p-6">
+          <h2 className="text-xl font-semibold text-primary mb-4">Parties</h2>
           {contractData.parties.length > 0 ? (
             <div className="space-y-4">
               {contractData.parties.map((party, index) => (
-                <div key={index} className="border border-gray-100 rounded-lg p-4">
+                <div key={index} className="border border-dark rounded-xl p-4">
                   <div className="flex items-center justify-between mb-2">
-                    <h3 className="font-medium text-gray-900">{party.name}</h3>
-                    <span className="text-sm text-gray-500 capitalize">{party.type}</span>
+                    <h3 className="font-medium text-primary">{party.name}</h3>
+                    <span className="text-sm text-secondary capitalize">{party.type}</span>
                   </div>
-                  <div className="text-sm text-gray-600 space-y-1">
+                  <div className="text-sm text-secondary space-y-1">
                     {party.contact_person && <p>Contact: {party.contact_person}</p>}
                     {party.email && <p>Email: {party.email}</p>}
                     {party.phone && <p>Phone: {party.phone}</p>}
                   </div>
                   <div className="mt-2 flex items-center gap-2">
-                    <span className="text-xs text-gray-500">Confidence:</span>
+                    <span className="text-xs text-muted">Confidence:</span>
                     <span className={`text-xs font-medium ${getConfidenceColor(party.confidence_score * 100)}`}>
                       {Math.round(party.confidence_score * 100)}%
                     </span>
@@ -284,18 +256,18 @@ const ContractDetail: React.FC<ContractDetailProps> = ({ contract, onBack }) => 
               ))}
             </div>
           ) : (
-            <p className="text-gray-500">No party information extracted</p>
+            <p className="text-muted">No party information extracted</p>
           )}
         </div>
 
         {/* Financial Details */}
-        <div className="bg-white border border-gray-200 rounded-lg p-6">
-          <h2 className="text-xl font-semibold text-gray-900 mb-4">Financial Details</h2>
+        <div className="dark-card p-6">
+          <h2 className="text-xl font-semibold text-primary mb-4">Financial Details</h2>
           <div className="space-y-4">
             {contractData.financial_details.total_contract_value && (
               <div>
-                <p className="text-sm text-gray-600">Total Contract Value</p>
-                <p className="text-2xl font-bold text-gray-900">
+                <p className="text-sm text-secondary">Total Contract Value</p>
+                <p className="text-2xl font-bold text-primary">
                   {contractData.financial_details.currency || '$'}
                   {contractData.financial_details.total_contract_value.toLocaleString()}
                 </p>
@@ -304,11 +276,11 @@ const ContractDetail: React.FC<ContractDetailProps> = ({ contract, onBack }) => 
             
             {contractData.financial_details.line_items.length > 0 && (
               <div>
-                <p className="text-sm text-gray-600 mb-2">Line Items</p>
+                <p className="text-sm text-secondary mb-2">Line Items</p>
                 <div className="space-y-2">
                   {contractData.financial_details.line_items.map((item, index) => (
-                    <div key={index} className="flex justify-between items-center text-sm">
-                      <span className="text-gray-700">{item.description}</span>
+                    <div key={index} className="flex justify-between items-center text-sm p-2 rounded-lg">
+                      <span className="text-primary">{item.description}</span>
                       <span className="font-medium">
                         {item.currency || '$'}{item.unit_price?.toLocaleString()}
                       </span>
@@ -319,7 +291,7 @@ const ContractDetail: React.FC<ContractDetailProps> = ({ contract, onBack }) => 
             )}
             
             <div className="flex items-center gap-2">
-              <span className="text-xs text-gray-500">Confidence:</span>
+              <span className="text-xs text-muted">Confidence:</span>
               <span className={`text-xs font-medium ${getConfidenceColor(contractData.financial_details.confidence_score * 100)}`}>
                 {Math.round(contractData.financial_details.confidence_score * 100)}%
               </span>
@@ -328,23 +300,23 @@ const ContractDetail: React.FC<ContractDetailProps> = ({ contract, onBack }) => 
         </div>
 
         {/* Payment Terms */}
-        <div className="bg-white border border-gray-200 rounded-lg p-6">
-          <h2 className="text-xl font-semibold text-gray-900 mb-4">Payment Terms</h2>
+        <div className="dark-card p-6">
+          <h2 className="text-xl font-semibold text-primary mb-4">Payment Terms</h2>
           <div className="space-y-3">
             {contractData.payment_terms.payment_terms && (
               <div>
-                <p className="text-sm text-gray-600">Payment Terms</p>
-                <p className="font-medium text-gray-900">{contractData.payment_terms.payment_terms}</p>
+                <p className="text-sm text-secondary">Payment Terms</p>
+                <p className="font-medium text-primary">{contractData.payment_terms.payment_terms}</p>
               </div>
             )}
             {contractData.payment_terms.payment_method && (
               <div>
-                <p className="text-sm text-gray-600">Payment Method</p>
-                <p className="font-medium text-gray-900">{contractData.payment_terms.payment_method}</p>
+                <p className="text-sm text-secondary">Payment Method</p>
+                <p className="font-medium text-primary">{contractData.payment_terms.payment_method}</p>
               </div>
             )}
             <div className="flex items-center gap-2">
-              <span className="text-xs text-gray-500">Confidence:</span>
+              <span className="text-xs text-muted">Confidence:</span>
               <span className={`text-xs font-medium ${getConfidenceColor(contractData.payment_terms.confidence_score * 100)}`}>
                 {Math.round(contractData.payment_terms.confidence_score * 100)}%
               </span>
@@ -353,31 +325,29 @@ const ContractDetail: React.FC<ContractDetailProps> = ({ contract, onBack }) => 
         </div>
 
         {/* Revenue Classification */}
-        <div className="bg-white border border-gray-200 rounded-lg p-6">
-          <h2 className="text-xl font-semibold text-gray-900 mb-4">Revenue Classification</h2>
+        <div className="dark-card p-6">
+          <h2 className="text-xl font-semibold text-primary mb-4">Revenue Classification</h2>
           <div className="space-y-3">
             {contractData.revenue_classification.payment_type && (
               <div>
-                <p className="text-sm text-gray-600">Payment Type</p>
-                <p className="font-medium text-gray-900 capitalize">{contractData.revenue_classification.payment_type}</p>
+                <p className="text-sm text-secondary">Payment Type</p>
+                <p className="font-medium text-primary capitalize">{contractData.revenue_classification.payment_type}</p>
               </div>
             )}
             {contractData.revenue_classification.billing_cycle && (
               <div>
-                <p className="text-sm text-gray-600">Billing Cycle</p>
-                <p className="font-medium text-gray-900 capitalize">{contractData.revenue_classification.billing_cycle}</p>
+                <p className="text-sm text-secondary">Billing Cycle</p>
+                <p className="font-medium text-primary capitalize">{contractData.revenue_classification.billing_cycle}</p>
               </div>
             )}
             {contractData.revenue_classification.auto_renewal !== undefined && (
               <div>
-                <p className="text-sm text-gray-600">Auto Renewal</p>
-                <p className="font-medium text-gray-900">
-                  {contractData.revenue_classification.auto_renewal ? 'Yes' : 'No'}
-                </p>
+                <p className="text-sm text-secondary">Auto Renewal</p>
+                <p className="font-medium text-primary">{contractData.revenue_classification.auto_renewal ? 'Yes' : 'No'}</p>
               </div>
             )}
             <div className="flex items-center gap-2">
-              <span className="text-xs text-gray-500">Confidence:</span>
+              <span className="text-xs text-muted">Confidence:</span>
               <span className={`text-xs font-medium ${getConfidenceColor(contractData.revenue_classification.confidence_score * 100)}`}>
                 {Math.round(contractData.revenue_classification.confidence_score * 100)}%
               </span>
