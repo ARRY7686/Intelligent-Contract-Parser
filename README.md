@@ -1,12 +1,10 @@
 # Contract Intelligence Platform
 
-A modern, AI-powered contract analysis platform with sleek animations and glassmorphism design. Upload PDF contracts and automatically extract key information with confidence scoring.
+A modern, AI-powered contract analysis platform. Upload PDF contracts and automatically extract key information with confidence scoring.
 
 ## Features
 
 ### 🎨 Modern Frontend
-- **Glassmorphism Design**: Beautiful frosted glass effects and modern UI
-- **Smooth Animations**: Framer Motion powered animations throughout the app
 - **Responsive Design**: Works perfectly on desktop, tablet, and mobile
 - **Real-time Updates**: Live status updates and progress tracking
 - **Interactive Elements**: Hover effects, micro-interactions, and visual feedback
@@ -182,7 +180,6 @@ contracts-intel/
 The frontend uses modern React patterns with:
 - **Functional Components** with hooks
 - **TypeScript** for type safety
-- **Framer Motion** for animations
 - **Tailwind CSS** for styling
 - **Custom hooks** for reusable logic
 
@@ -200,10 +197,6 @@ The backend uses FastAPI with:
 3. Make your changes
 4. Add tests if applicable
 5. Submit a pull request
-
-## License
-
-This project is licensed under the MIT License.
 
 ## Support
 
